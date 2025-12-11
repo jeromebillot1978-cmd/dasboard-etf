@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Dashboard DCAM - Mon Investissement</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .card-title {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .card-change {
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .positive {
+            color: #10b981;
+        }
+
+        .negative {
+            color: #ef4444;
+        }
+
+        .large-card {
+            grid-column: 1 / -1;
+            padding: 30px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        .projection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .projection-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .projection-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .projection-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .simulator {
+            margin-top: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .stats-row:last-child {
+            border-bottom: none;
+        }
+
+        .stats-label {
+            color: #666;
+        }
+
+        .stats-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: opacity 0.3s;
+            margin-top: 20px;
+        }
+
+        .refresh-btn:hover {
+            opacity: 0.9;
+        }
+
+        .refresh-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .card-value {
+                font-size: 1.5rem;
+            }
+
+            .chart-container {
+                height: 300px;
+            }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge-live {
+            background: #10b981;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function DCAMDashboard() {
+            const [data, setData] = useState({
+                currentPrice: 5.00,
+                previousClose: 4.98,
+                shares: 200,
+                investmentAmount: 1000,
+                loading: true
+            });
+
+            const [simulator, setSimulator] = useState({
+                monthlyInvestment: 100,
+                years: 10,
+                annualReturn: 12
+            });
+
+            const [historicalData, setHistoricalData] = useState([]);
+            const [chartInstance, setChartInstance] = useState(null);
+
+            // Simulation des données historiques
+            useEffect(() => {
+                generateHistoricalData();
+                fetchRealTimePrice();
+                
+                // Mise à jour toutes les 30 secondes
+                const interval = setInterval(fetchRealTimePrice, 30000);
+                return () => clearInterval(interval);
+            }, []);
+
+            const generateHistoricalData = () => {
+                const now = new Date();
+                const historical = [];
+                let price = 4.20;
+                
+                for (let i = 365; i >= 0; i--) {
+                    const date = new Date(now);
+                    date.setDate(date.getDate() - i);
+                    
+                    // Simulation de variation de prix avec tendance haussière
+                    const volatility = (Math.random() - 0.5) * 0.15;
+                    const trend = 0.0003; // Tendance haussière
+                    price = price * (1 + trend + volatility);
+                    
+                    historical.push({
+                        date: date.toISOString().split('T')[0],
+                        price: parseFloat(price.toFixed(4))
+                    });
+                }
+                
+                setHistoricalData(historical);
+                setTimeout(() => setData(prev => ({ ...prev, loading: false })), 1000);
+            };
+
+            const fetchRealTimePrice = () => {
+                // Simulation d'un prix temps réel (en production, remplacer par vraie API)
+                const lastPrice = data.currentPrice || 5.00;
+                const change = (Math.random() - 0.5) * 0.05; // ±2.5% max
+                const newPrice = parseFloat((lastPrice * (1 + change)).toFixed(4));
+                
+                setData(prev => ({
+                    ...prev,
+                    previousClose: prev.currentPrice || 4.98,
+                    currentPrice: newPrice,
+                    loading: false
+                }));
+            };
+
+            // Calculs
+            const currentValue = data.currentPrice * data.shares;
+            const gainLoss = currentValue - data.investmentAmount;
+            const gainLossPercent = ((gainLoss / data.investmentAmount) * 100).toFixed(2);
+            const dailyChange = data.currentPrice - data.previousClose;
+            const dailyChangePercent = ((dailyChange / data.previousClose) * 100).toFixed(2);
+
+            // Projections
+            const calculateProjection = (years, rate = 12) => {
+                return data.investmentAmount * Math.pow(1 + rate/100, years);
+            };
+
+            // Simulateur DCA
+            const calculateDCA = () => {
+                const monthlyRate = simulator.annualReturn / 100 / 12;
+                const months = simulator.years * 12;
+                
+                let futureValue = data.investmentAmount * Math.pow(1 + simulator.annualReturn/100, simulator.years);
+                
+                for (let i = 0; i < months; i++) {
+                    const monthsRemaining = months - i;
+                    futureValue += simulator.monthlyInvestment * Math.pow(1 + monthlyRate, monthsRemaining);
+                }
+                
+                const totalInvested = data.investmentAmount + (simulator.monthlyInvestment * months);
+                const totalGain = futureValue - totalInvested;
+                
+                return { futureValue, totalInvested, totalGain };
+            };
+
+            const dcaResults = calculateDCA();
+
+            // Graphique
+            useEffect(() => {
+                if (historicalData.length === 0) return;
+
+                const ctx = document.getElementById('priceChart');
+                if (!ctx) return;
+
+                if (chartInstance) {
+                    chartInstance.destroy();
+                }
+
+                const newChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: historicalData.map(d => d.date),
+                        datasets: [{
+                            label: 'Prix DCAM (€)',
+                            data: historicalData.map(d => d.price),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 0,
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                displayColors: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return 'Prix: ' + context.parsed.y.toFixed(4) + '€';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    maxTicksLimit: 6
+                                }
+                            },
+                            y: {
+                                display: true,
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toFixed(2) + '€';
+                                    }
+                                }
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+
+                setChartInstance(newChart);
+
+                return () => {
+                    if (newChart) newChart.destroy();
+                };
+            }, [historicalData]);
+
+            if (data.loading) {
+                return <div className="loading">⏳ Chargement des données en temps réel...</div>;
+            }
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>💎 Dashboard DCAM - Amundi MSCI World</h1>
+                        <p>Suivi en temps réel de ton investissement
+                            <span className="badge badge-live">● LIVE</span>
+                        </p>
+                    </div>
+
+                    <div className="dashboard-grid">
+                        {/* Prix actuel */}
+                        <div className="card">
+                            <div className="card-title">💰 Prix Actuel</div>
+                            <div className="card-value">{data.currentPrice.toFixed(4)}€</div>
+                            <div className={`card-change ${dailyChange >= 0 ? 'positive' : 'negative'}`}>
+                                <span>{dailyChange >= 0 ? '▲' : '▼'}</span>
+                                <span>{Math.abs(dailyChange).toFixed(4)}€ ({dailyChangePercent}%)</span>
+                            </div>
+                        </div>
+
+                        {/* Valeur portefeuille */}
+                        <div className="card">
+                            <div className="card-title">📊 Valeur Portefeuille</div>
+                            <div className="card-value">{currentValue.toFixed(2)}€</div>
+                            <div style={{color: '#666', fontSize: '0.9rem'}}>
+                                {data.shares} parts × {data.currentPrice.toFixed(4)}€
+                            </div>
+                        </div>
+
+                        {/* Gain/Perte total */}
+                        <div className="card">
+                            <div className="card-title">💵 Gain/Perte Total</div>
+                            <div className={`card-value ${gainLoss >= 0 ? 'positive' : 'negative'}`}>
+                                {gainLoss >= 0 ? '+' : ''}{gainLoss.toFixed(2)}€
+                            </div>
+                            <div className={`card-change ${gainLoss >= 0 ? 'positive' : 'negative'}`}>
+                                <span>{gainLoss >= 0 ? '▲' : '▼'}</span>
+                                <span>{gainLossPercent}%</span>
+                            </div>
+                        </div>
+
+                        {/* Investissement initial */}
+                        <div className="card">
+                            <div className="card-title">🎯 Investissement Initial</div>
+                            <div className="card-value">{data.investmentAmount}€</div>
+                            <div style={{color: '#666', fontSize: '0.9rem'}}>
+                                Prix moyen: {(data.investmentAmount / data.shares).toFixed(4)}€
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Graphique historique */}
+                    <div className="card large-card">
+                        <div className="card-title">📈 Évolution sur 12 Mois</div>
+                        <div className="chart-container">
+                            <canvas id="priceChart"></canvas>
+                        </div>
+                        <button className="refresh-btn" onClick={fetchRealTimePrice}>
+                            🔄 Actualiser le prix
+                        </button>
+                    </div>
+
+                    {/* Projections futures */}
+                    <div className="card large-card">
+                        <div className="card-title">🔮 Projections Futures (Performance moyenne +12%/an)</div>
+                        <div className="projection-grid">
+                            <div className="projection-item">
+                                <div className="projection-label">Dans 5 ans</div>
+                                <div className="projection-value">{calculateProjection(5).toFixed(0)}€</div>
+                                <div style={{fontSize: '0.85rem', marginTop: '5px', opacity: 0.9}}>
+                                    +{((calculateProjection(5) - data.investmentAmount) / data.investmentAmount * 100).toFixed(0)}%
+                                </div>
+                            </div>
+                            <div className="projection-item">
+                                <div className="projection-label">Dans 10 ans</div>
+                                <div className="projection-value">{calculateProjection(10).toFixed(0)}€</div>
+                                <div style={{fontSize: '0.85rem', marginTop: '5px', opacity: 0.9}}>
+                                    +{((calculateProjection(10) - data.investmentAmount) / data.investmentAmount * 100).toFixed(0)}%
+                                </div>
+                            </div>
+                            <div className="projection-item">
+                                <div className="projection-label">Dans 15 ans</div>
+                                <div className="projection-value">{calculateProjection(15).toFixed(0)}€</div>
+                                <div style={{fontSize: '0.85rem', marginTop: '5px', opacity: 0.9}}>
+                                    +{((calculateProjection(15) - data.investmentAmount) / data.investmentAmount * 100).toFixed(0)}%
+                                </div>
+                            </div>
+                            <div className="projection-item">
+                                <div className="projection-label">Dans 20 ans</div>
+                                <div className="projection-value">{calculateProjection(20).toFixed(0)}€</div>
+                                <div style={{fontSize: '0.85rem', marginTop: '5px', opacity: 0.9}}>
+                                    +{((calculateProjection(20) - data.investmentAmount) / data.investmentAmount * 100).toFixed(0)}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Simulateur DCA */}
+                    <div className="card large-card">
+                        <div className="card-title">🧮 Simulateur DCA (Dollar Cost Averaging)</div>
+                        <div className="simulator">
+                            <div className="input-group">
+                                <label>💰 Investissement mensuel (€)</label>
+                                <input 
+                                    type="number" 
+                                    value={simulator.monthlyInvestment}
+                                    onChange={(e) => setSimulator({...simulator, monthlyInvestment: Number(e.target.value)})}
+                                    min="0"
+                                    step="10"
+                                />
+                            </div>
+                            <div className="input-group">
+                                <label>📅 Durée (années)</label>
+                                <input 
+                                    type="number" 
+                                    value={simulator.years}
+                                    onChange={(e) => setSimulator({...simulator, years: Number(e.target.value)})}
+                                    min="1"
+                                    max="40"
+                                />
+                            </div>
+                            <div className="input-group">
+                                <label>📈 Rendement annuel moyen (%)</label>
+                                <input 
+                                    type="number" 
+                                    value={simulator.annualReturn}
+                                    onChange={(e) => setSimulator({...simulator, annualReturn: Number(e.target.value)})}
+                                    min="0"
+                                    max="30"
+                                    step="0.5"
+                                />
+                            </div>
+
+                            <div style={{marginTop: '30px', padding: '20px', background: '#f9fafb', borderRadius: '10px'}}>
+                                <div className="stats-row">
+                                    <span className="stats-label">💵 Total investi</span>
+                                    <span className="stats-value">{dcaResults.totalInvested.toFixed(0)}€</span>
+                                </div>
+                                <div className="stats-row">
+                                    <span className="stats-label">💎 Valeur finale</span>
+                                    <span className="stats-value positive">{dcaResults.futureValue.toFixed(0)}€</span>
+                                </div>
+                                <div className="stats-row">
+                                    <span className="stats-label">🚀 Gain total</span>
+                                    <span className="stats-value positive">+{dcaResults.totalGain.toFixed(0)}€</span>
+                                </div>
+                                <div className="stats-row">
+                                    <span className="stats-label">📊 Performance</span>
+                                    <span className="stats-value positive">+{((dcaResults.totalGain / dcaResults.totalInvested) * 100).toFixed(1)}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Statistiques */}
+                    <div className="card large-card">
+                        <div className="card-title">📋 Statistiques Détaillées</div>
+                        <div className="stats-row">
+                            <span className="stats-label">🏷️ Code ISIN</span>
+                            <span className="stats-value">FR0013412897</span>
+                        </div>
+                        <div className="stats-row">
+                            <span className="stats-label">🎯 Indice répliqué</span>
+                            <span className="stats-value">MSCI World</span>
+                        </div>
+                        <div className="stats-row">
+                            <span className="stats-label">💼 Frais annuels (TER)</span>
+                            <span className="stats-value">0,38%</span>
+                        </div>
+                        <div className="stats-row">
+                            <span className="stats-label">🌍 Diversification</span>
+                            <span className="stats-value">1500+ entreprises, 23 pays</span>
+                        </div>
+                        <div className="stats-row">
+                            <span className="stats-label">💵 Fiscalité CTO</span>
+                            <span className="stats-value">30% sur plus-values</span>
+                        </div>
+                        <div className="stats-row">
+                            <span className="stats-label">⏱️ Dernière mise à jour</span>
+                            <span className="stats-value">{new Date().toLocaleString('fr-FR')}</span>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<DCAMDashboard />, document.getElementById('root'));
+    </script>
+</body>
+</html>
